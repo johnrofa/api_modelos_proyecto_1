@@ -20,8 +20,9 @@ leModel = joblib.load('leModel_01.pkl')
 print("---------inicio 3-----------")
 leState = joblib.load('leState_01.pkl')
 
+#phishing_clf_01.pkl
 
-regRF11 = joblib.load('phishing_clf_01.pkl')
+regRF11 = joblib.load('regresion.pkl')
 print('regRF11')
 xgboost1 = joblib.load('regresion.pkl')
 print('xgboost1')
