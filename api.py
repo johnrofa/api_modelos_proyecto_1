@@ -1,55 +1,22 @@
-#!/usr/bin/env python
-# coding: utf-8
-# In[ ]:
 from flask import Flask
 from flask_restx import Api, Resource, fields
 import joblib
 from flask_cors import CORS
-
 from m09_model_deployment_01 import Modelos
-
-from sklearn.ensemble import RandomForestRegressor
 from sklearn.preprocessing import LabelEncoder
 from xgboost import XGBRegressor
-import numpy
 
-print("---------inicio-----------")
+xgboost1 = joblib.load('regresion.pkl')
 leMake = joblib.load('leMake_01.pkl')
-print("---------inicio 2-----------")
 leModel = joblib.load('leModel_01.pkl')
-print("---------inicio 3-----------")
 leState = joblib.load('leState_01.pkl')
 
-#phishing_clf_01.pkl
-
-regRF11 = joblib.load('regresion.pkl')
-print('regRF11')
-xgboost1 = joblib.load('regresion.pkl')
-print('xgboost1')
-
-
-
-
-
-
-# Definición aplicación Flask
-app = Flask(__name__)
-
-# Habilitación del modelo para todas las rutas y orígenes
-CORS(app)
-
-api = Api(
-    app,
-    version='1.0',
-    title='Prediccion Precio Vehiculos',
-    description='Prediccion Precio Vehiculos')
-
-ns = api.namespace('predict',
-                   description='Prediccion Precio Vehiculos')
-
+# Definición aplicación Flask y habilitación del modelo para todas las rutas y orígenes
+app = Flask(__name__); CORS(app)
+api = Api( app, version='1.0', title='Prediccion Precio Vehiculos',  description='Prediccion Precio Vehiculos')
+ns = api.namespace('predict', description='Prediccion Precio Vehiculos')
 parser = api.parser()
-
-
+# Definición opciones de seleccion (listas)
 list_Make=['Seleccione la marca', 'Acura', 'Audi', 'BMW', 'Bentley', 'Buick', 'Cadillac',
        'Chevrolet', 'Chrysler', 'Dodge', 'FIAT', 'Ford', 'Freightliner',
        'GMC', 'Honda', 'Hyundai', 'INFINITI', 'Jaguar', 'Jeep', 'Kia',
@@ -63,7 +30,6 @@ list_State=['Seleccione el Estado', ' AK', ' AL', ' AR', ' AZ', ' CA', ' CO', ' 
        ' NC', ' ND', ' NE', ' NH', ' NJ', ' NM', ' NV', ' NY', ' OH',
        ' OK', ' OR', ' PA', ' RI', ' SC', ' SD', ' TN', ' TX', ' UT',
        ' VA', ' VT', ' WA', ' WI', ' WV', ' WY']
-
 List_Modelo_Auto=['Seleccione el Modelo', '1', '15002WD', '15004WD', '1500Laramie', '1500Tradesman', '200LX',
        '200Limited', '200S', '200Touring', '25002WD', '25004WD', '3',
        '300300C', '300300S', '3004dr', '300Base', '300Limited',
@@ -172,101 +138,29 @@ List_Modelo_Auto=['Seleccione el Modelo', '1', '15002WD', '15004WD', '1500Larami
        'XC90T6', 'XF4dr', 'XJ4dr', 'XK2dr', 'Xterra2WD', 'Xterra4WD',
        'Xterra4dr', 'Yaris', 'Yaris4dr', 'YarisBase', 'YarisLE', 'Yukon',
        'Yukon2WD', 'Yukon4WD', 'Yukon4dr', 'tC2dr', 'xB5dr', 'xD5dr']
+List_Modelo=['XGBoost']
+# Definición Parámetros de entrada
+parser.add_argument('Modelo',type = str, default=List_Modelo[0],  choices=List_Modelo, required = True  )
+parser.add_argument('Year', type = int, required = True)
+parser.add_argument('Mileage', type = int, required = True)
+parser.add_argument('State', type = str, default='Seleccione un Estado', choices=list_State, required = True )
+parser.add_argument('Make', type = str,  default='Seleccione la Marca', choices=list_Make,  required = True )
+parser.add_argument('Model', type = str, default='Seleccione el Modelo', choices=List_Modelo_Auto, required = True)
 
-List_Modelo=['Seleccione un Modelo', 'Random_Forest', 'XGBoost']
-
-parser.add_argument(
-    'Modelo',
-    type = str,
-    default='Seleccione un Modelo',
-    choices=List_Modelo,
-    required = True
-    )
-
-
-
-parser.add_argument(
-    'Year',
-    type = int,
-    required = True)
-
-parser.add_argument(
-    'Mileage',
-    type = int,
-    required = True)
-
-parser.add_argument(
-    'State',
-    type = str,
-    default='Seleccione un Modelo',
-    choices=list_State,
-    required = True
-)
-
-parser.add_argument(
-    'Make',
-    type = str,
-    default='Seleccione un Modelo',
-    choices=list_Make,
-    required = True
-)
-
-parser.add_argument(
-    'Model',
-    type = str,
-    default='Seleccione un Modelo',
-    choices=List_Modelo_Auto,
-    required = True
-)
-
-
-
-resource_fields = api.model('Resource', {
-    'result': fields.String,
-})
-
-
-
-
+resource_fields = api.model('Resource', { 'result': fields.String, })
 
 @ns.route('/')
-class PhishingApi(Resource):
-
+class PredictionApi(Resource):
     @api.doc(parser=parser)
     @api.marshal_with(resource_fields)
     def get(self):
         args = parser.parse_args()
         print(args)
-
-
-
-
-
-        datos= {
-            "Year": args['Year'],
-            "Mileage": args['Mileage'],
-            "State": args['State'],
-            "Make": args['Make'],
-            "Model": args['Model'],
-        }
-
-        print(datos)
-
-        if args['Modelo'] == 'Random_Forest':
-            aplicar_modelo = regRF11
-        elif args['Modelo'] == 'XGBoost':
-            aplicar_modelo = xgboost1
-        else:
-            aplicar_modelo = regRF11
-
+        datos= { "Year": args['Year'], "Mileage": args['Mileage'], "State": args['State'],
+                 "Make": args['Make'], "Model": args['Model']}
+        aplicar_modelo = xgboost1
         resultado = Modelos(datos, leMake, leModel, leState, aplicar_modelo)
-
-        return {
-                   "result": str(resultado)
-               }, 200
-
-
-
+        return { "result": str(resultado)}, 200
 
 if __name__ == '__main__':
     app.run(debug=True, use_reloader=False, host='0.0.0.0', port=5000)
